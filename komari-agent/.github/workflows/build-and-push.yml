@@ -18,9 +18,6 @@ permissions:
   contents: read
   packages: write
 
-env:
-  IMAGE_NAME: komari-agent
-
 jobs:
   # 前置检查：读取上游最新版本，判断是否已经有对应镜像，避免重复构建
   check:
@@ -44,7 +41,6 @@ jobs:
         id: check
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           FORCE: ${{ github.event.inputs.force }}
         run: |
           if [ "$FORCE" = "true" ]; then
@@ -53,7 +49,7 @@ jobs:
             exit 0
           fi
           HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://hub.docker.com/v2/repositories/${DOCKERHUB_USERNAME}/${IMAGE_NAME}/tags/agent-${VERSION}")
+            "https://hub.docker.com/v2/repositories/hzct123/komari/tags/agent-${VERSION}")
           if [ "$HTTP" = "200" ]; then
             echo "tag agent-${VERSION} 已存在，跳过构建"
             echo "should_build=false" >> "$GITHUB_OUTPUT"
@@ -86,7 +82,7 @@ jobs:
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: hzct123
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push
@@ -97,7 +93,7 @@ jobs:
           push: true
           # agent 始终指向最新；agent-<版本> 与上游版本同步
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:agent
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:agent-${{ needs.check.outputs.version }}
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:agent
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:agent-${{ needs.check.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/komari:agent
+            ghcr.io/${{ github.repository_owner }}/komari:agent-${{ needs.check.outputs.version }}
+            hzct123/komari:agent
+            hzct123/komari:agent-${{ needs.check.outputs.version }}
