@@ -88,7 +88,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./komari-agent
+          file: ./komari-agent/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           # agent 始终指向最新；agent-<版本> 与上游版本同步
