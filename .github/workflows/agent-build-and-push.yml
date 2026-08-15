@@ -94,7 +94,7 @@ jobs:
           push: true
           # agent 始终指向最新；agent-<版本> 与上游版本同步
           tags: |
-            ghcr.io/${{ github.repository_owner }}/komari:agent
             ghcr.io/${{ github.repository_owner }}/komari:agent-${{ needs.check.outputs.version }}
-            hzct123/komari:agent
+            ghcr.io/${{ github.repository_owner }}/komari:agent
             hzct123/komari:agent-${{ needs.check.outputs.version }}
+            hzct123/komari:agent
