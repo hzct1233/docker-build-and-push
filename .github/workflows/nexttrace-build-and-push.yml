@@ -1,4 +1,4 @@
-name: Build and Push nexttrace
+name: nexttrace-build-and-push
 
 on:
   push:
