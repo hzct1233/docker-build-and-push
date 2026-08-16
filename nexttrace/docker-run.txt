@@ -1,0 +1,15 @@
+使用方法：docker run -it --rm --cap-add=NET_RAW --network=host hzct123/nexttrace 1.1.1.1
+
+很精简，没有基础镜像系统，只有nexttrace二进制运行文件和联网需要使用的CA证书。
+
+按照使用方法复制粘贴，最后面的1.1.1.1替换成其他ip或者域名，有--rm停止运行后会自动删除容器，不用担心容器堆积。
+
+————————————————————————————————————————————————————————————————————————
+
+嫌那一大串太长的，也可以添加别名。
+
+添加别名方法：alias ntrace='docker run -it --rm --cap-add=NET_RAW --network=host hzct123/nexttrace'
+
+要永久生效别名需要nano ~/.bashrc或者vim ~/.bashrc手动编辑粘贴添加，重启ssh连接软件生效，按照个人习惯使用nano和vim都可以，两个都不会的话自行百度。永久删除也是一样的操作。
+
+这样运行ntrace 1.1.1.1就可以了。
