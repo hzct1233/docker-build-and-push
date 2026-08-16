@@ -88,20 +88,19 @@ jobs:
           username: hzct123
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 主程序 nexttrace -> latest + 版本号
-      - name: Build and push nexttrace (main)
+      - name: Build and push ntr
         uses: docker/build-push-action@v6
         with:
           context: ./nexttrace
           file: ./nexttrace/Dockerfile
-          target: nexttrace
+          target: ntr
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/nexttrace:${{ needs.check.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/nexttrace:latest
-            hzct123/nexttrace:${{ needs.check.outputs.version }}
-            hzct123/nexttrace:latest
+            ghcr.io/${{ github.repository_owner }}/nexttrace:ntr-${{ needs.check.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/nexttrace:ntr
+            hzct123/nexttrace:ntr-${{ needs.check.outputs.version }}
+            hzct123/nexttrace:ntr
 
       # 精简版 -> tiny
       - name: Build and push nexttrace-tiny
@@ -118,17 +117,17 @@ jobs:
             hzct123/nexttrace:tiny-${{ needs.check.outputs.version }}
             hzct123/nexttrace:tiny
 
-      # ntr 工具 -> ntr
-      - name: Build and push ntr
+      # 主程序 nexttrace -> latest + 版本号
+      - name: Build and push nexttrace (main)
         uses: docker/build-push-action@v6
         with:
           context: ./nexttrace
           file: ./nexttrace/Dockerfile
-          target: ntr
+          target: nexttrace
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/nexttrace:ntr-${{ needs.check.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/nexttrace:ntr
-            hzct123/nexttrace:ntr-${{ needs.check.outputs.version }}
-            hzct123/nexttrace:ntr
+            ghcr.io/${{ github.repository_owner }}/nexttrace:${{ needs.check.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/nexttrace:latest
+            hzct123/nexttrace:${{ needs.check.outputs.version }}
+            hzct123/nexttrace:latest
