@@ -1,0 +1,134 @@
+name: Build and Push nexttrace
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'nexttrace/**'
+      - '.github/workflows/nexttrace-build-and-push.yml'
+    tags: ['v*']
+  schedule:
+    - cron: '0 */12 * * *' # 每 12 小时检查上游 NTrace-core 新版本
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '强制重新构建（忽略已有 tag 的检查）'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # 前置检查：读取上游最新版本，判断是否已经有对应镜像，避免重复构建
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should_build: ${{ steps.check.outputs.should_build }}
+    steps:
+      - name: Resolve upstream version
+        id: version
+        run: |
+          # 与 Dockerfile 保持一致：取 releases 列表第一个 tag
+          TAG=$(curl -fsSL \
+            https://api.github.com/repos/nxtrace/NTrace-core/releases \
+            | jq -r '.[0].tag_name')
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "upstream ${TAG} -> ${VERSION}"
+
+      - name: Check if image tag already exists
+        id: check
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          FORCE: ${{ github.event.inputs.force }}
+        run: |
+          if [ "$FORCE" = "true" ]; then
+            echo "强制重建，跳过版本检查"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://hub.docker.com/v2/repositories/hzct123/nexttrace/tags/${VERSION}")
+          if [ "$HTTP" = "200" ]; then
+            echo "tag ${VERSION} 已存在，跳过构建"
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "检测到新版本 ${VERSION}，触发构建"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-and-push:
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: hzct123
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 主程序 nexttrace -> latest + 版本号
+      - name: Build and push nexttrace (main)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./nexttrace
+          file: ./nexttrace/Dockerfile
+          target: nexttrace
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/nexttrace:${{ needs.check.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/nexttrace:latest
+            hzct123/nexttrace:${{ needs.check.outputs.version }}
+            hzct123/nexttrace:latest
+
+      # 精简版 -> tiny
+      - name: Build and push nexttrace-tiny
+        uses: docker/build-push-action@v6
+        with:
+          context: ./nexttrace
+          file: ./nexttrace/Dockerfile
+          target: tiny
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/nexttrace:tiny-${{ needs.check.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/nexttrace:tiny
+            hzct123/nexttrace:tiny-${{ needs.check.outputs.version }}
+            hzct123/nexttrace:tiny
+
+      # ntr 工具 -> ntr
+      - name: Build and push ntr
+        uses: docker/build-push-action@v6
+        with:
+          context: ./nexttrace
+          file: ./nexttrace/Dockerfile
+          target: ntr
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/nexttrace:ntr-${{ needs.check.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/nexttrace:ntr
+            hzct123/nexttrace:ntr-${{ needs.check.outputs.version }}
+            hzct123/nexttrace:ntr
