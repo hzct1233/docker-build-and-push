@@ -3,7 +3,6 @@ services:
     image: hzct123/komari:agent
     container_name: komari-agent
     network_mode: host
-    pid: host
     cap_drop:
       - ALL
     cap_add:
@@ -11,6 +10,7 @@ services:
     volumes:
       - ./komari-agent:/home/nonroot/komari-agent
       # 主系统设置：chown -R 65532:65532 /完整映射目录/komari-agent  不设置会导致软件没有权限写入持久化文件
+      - /proc:/host/proc:ro
       - /etc/os-release:/etc/os-release:ro
     command: -e https://xxxxx.xxxxxxx.xyz -t xxxxxxxxxxxxxxxxxxx --disable-web-ssh --disable-auto-update
     # 一键部署指令，选择好功能后，从-e复制到结束，粘贴到command:
