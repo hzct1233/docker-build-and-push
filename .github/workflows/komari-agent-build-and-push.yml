@@ -32,7 +32,7 @@ jobs:
           TAG=$(curl -fsSL \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/komari-monitor/komari-agent/releases/latest \
-            | jq -r '.tag_name')
+            | jq -r '.[0].tag_name')
           VERSION="${TAG}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "upstream ${TAG} -> agent-${VERSION}"
