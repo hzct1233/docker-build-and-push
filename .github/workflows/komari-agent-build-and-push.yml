@@ -56,20 +56,20 @@ jobs:
             exit 0
           fi
 
-          # 最新版
+          # 稳定版
           HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
             "https://hub.docker.com/v2/repositories/hzct123/komari/tags/agent-${LATEST}")
           if [ "$HTTP" = "200" ]; then
-            echo "最新版 agent-${LATEST} 已存在，跳过"
+            echo "稳定版 agent-${LATEST} 已存在，跳过"
             echo "build_latest=false" >> "$GITHUB_OUTPUT"
           else
-            echo "检测到新最新版 agent-${LATEST}，触发构建"
+            echo "检测到新稳定版 agent-${LATEST}，触发构建"
             echo "build_latest=true" >> "$GITHUB_OUTPUT"
           fi
 
           # 测试版
           if [ "$BETA" = "$LATEST" ]; then
-            echo "测试版与最新版相同（${BETA}），由最新版线覆盖，跳过测试版构建"
+            echo "测试版与稳定版相同（${BETA}），由稳定版线覆盖，跳过测试版构建"
             echo "build_beta=false" >> "$GITHUB_OUTPUT"
           else
             HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
