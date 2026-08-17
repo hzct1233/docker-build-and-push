@@ -69,7 +69,7 @@ jobs:
 
           # 测试版
           if [ "$BETA" = "$LATEST" ]; then
-            echo "测试版与稳定版相同（${BETA}），由稳定版线覆盖，跳过测试版构建"
+            echo "测试版与稳定版相同（${BETA}），由稳定版覆盖，跳过测试版构建"
             echo "build_beta=false" >> "$GITHUB_OUTPUT"
           else
             HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
