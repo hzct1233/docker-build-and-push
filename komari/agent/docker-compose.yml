@@ -4,6 +4,8 @@ services:
     container_name: komari-agent
     network_mode: host
     pid: host
+    cap_drop:
+      - ALL
     cap_add:
       - NET_RAW
     volumes:
