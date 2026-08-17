@@ -5,7 +5,7 @@ on:
     branches: [main, master]
     tags: ['v*']
   schedule:
-    - cron: '0 */12 * * *' # 每 12 小时（UTC 00:00 / 12:00，即北京时间 08:00 / 20:00）检查上游新版本
+    - cron: '0 */12 * * *'
   workflow_dispatch:
     inputs:
       force:
@@ -19,82 +19,132 @@ permissions:
   packages: write
 
 jobs:
-  # 前置检查：读取上游最新版本，判断是否已经有对应镜像，避免重复构建
   check:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      should_build: ${{ steps.check.outputs.should_build }}
+      latest_version: ${{ steps.version.outputs.latest_version }}
+      beta_version: ${{ steps.version.outputs.beta_version }}
+      build_latest: ${{ steps.check.outputs.build_latest }}
+      build_beta: ${{ steps.check.outputs.build_beta }}
     steps:
-      - name: Resolve upstream version
+      - name: Resolve upstream versions
         id: version
         run: |
-          TAG=$(curl -fsSL \
+          LATEST=$(curl -fsSL \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/komari-monitor/komari-agent/releases/latest \
+            | jq -r '.tag_name')
+          BETA=$(curl -fsSL \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/komari-monitor/komari-agent/releases?per_page=1" \
             | jq -r '.[0].tag_name')
-          VERSION="${TAG}"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "upstream ${TAG} -> agent-${VERSION}"
+          echo "latest_version=${LATEST}" >> "$GITHUB_OUTPUT"
+          echo "beta_version=${BETA}" >> "$GITHUB_OUTPUT"
+          echo "latest=${LATEST}  beta=${BETA}"
 
-      - name: Check if image tag already exists
+      - name: Check which tags need building
         id: check
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          LATEST: ${{ steps.version.outputs.latest_version }}
+          BETA: ${{ steps.version.outputs.beta_version }}
           FORCE: ${{ github.event.inputs.force }}
         run: |
           if [ "$FORCE" = "true" ]; then
             echo "强制重建，跳过版本检查"
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "build_latest=true" >> "$GITHUB_OUTPUT"
+            echo "build_beta=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
+          # 最新版
           HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://hub.docker.com/v2/repositories/hzct123/komari/tags/agent-${VERSION}")
+            "https://hub.docker.com/v2/repositories/hzct123/komari/tags/agent-${LATEST}")
           if [ "$HTTP" = "200" ]; then
-            echo "tag agent-${VERSION} 已存在，跳过构建"
-            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            echo "最新版 agent-${LATEST} 已存在，跳过"
+            echo "build_latest=false" >> "$GITHUB_OUTPUT"
           else
-            echo "检测到新版本 agent-${VERSION}，触发构建"
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "检测到新最新版 agent-${LATEST}，触发构建"
+            echo "build_latest=true" >> "$GITHUB_OUTPUT"
           fi
 
-  build-and-push:
+          # 测试版
+          if [ "$BETA" = "$LATEST" ]; then
+            echo "测试版与最新版相同（${BETA}），由最新版线覆盖，跳过测试版构建"
+            echo "build_beta=false" >> "$GITHUB_OUTPUT"
+          else
+            HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://hub.docker.com/v2/repositories/hzct123/komari/tags/agent-${BETA}")
+            if [ "$HTTP" = "200" ]; then
+              echo "测试版 agent-${BETA} 已存在，跳过"
+              echo "build_beta=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "检测到新测试版 agent-${BETA}，触发构建"
+              echo "build_beta=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+  build-beta:
     needs: check
-    if: needs.check.outputs.should_build == 'true'
+    if: needs.check.outputs.build_beta == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: hzct123
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push
+      - name: Build and push (beta)
         uses: docker/build-push-action@v6
         with:
           context: ./komari/agent
           file: ./komari/agent/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          # agent 始终指向最新；agent-<版本> 与上游版本同步
           tags: |
-            ghcr.io/${{ github.repository_owner }}/komari:agent-${{ needs.check.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/komari:agent-${{ needs.check.outputs.beta_version }}
+            hzct123/komari:agent-${{ needs.check.outputs.beta_version }}
+
+  build-latest:
+    needs: check
+    if: needs.check.outputs.build_latest == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: hzct123
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push (latest)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./komari/agent
+          file: ./komari/agent/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
             ghcr.io/${{ github.repository_owner }}/komari:agent
-            hzct123/komari:agent-${{ needs.check.outputs.version }}
             hzct123/komari:agent
