@@ -1,9 +1,6 @@
 name: komari-agent-build-and-push
 
 on:
-  push:
-    branches: [main, master]
-    tags: ['v*']
   schedule:
     - cron: '0 */12 * * *'
   workflow_dispatch:
