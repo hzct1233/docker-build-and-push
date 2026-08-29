@@ -57,6 +57,9 @@ jobs:
             echo "has_update=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Trigger Build Workflow
         if: steps.check.outputs.has_update == 'true'
         env:
