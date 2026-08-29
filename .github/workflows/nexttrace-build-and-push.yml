@@ -1,8 +1,6 @@
 name: nexttrace-build-and-push
 
 on:
-  schedule:
-    - cron: '0 */12 * * *' # 每 12 小时检查上游 NTrace-core 新版本
   workflow_dispatch:
     inputs:
       force:
