@@ -14,7 +14,6 @@ permissions:
   packages: write
 
 jobs:
-  # 前置检查：读取上游最新版本，判断是否已经有对应镜像，避免重复构建
   check:
     runs-on: ubuntu-latest
     outputs:
