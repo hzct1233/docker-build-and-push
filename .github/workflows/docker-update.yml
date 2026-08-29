@@ -1,0 +1,58 @@
+name: docker-update
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target_name: "komari-agent"
+            upstream_repo: "komari-monitor/komari-agent"
+            workflow_file: "komari-agent-build-and-push.yml"
+            docker_repo: "hzct123/komari"
+            tag_prefix: "agent-"
+          - target_name: "nexttrace"
+            upstream_repo: "nxtrace/NTrace-core"
+            workflow_file: "nexttrace-build-and-push.yml"
+            docker_repo: "hzct123/nexttrace"
+            tag_prefix: ""
+
+    steps:
+      - name: Check Update for ${{ matrix.target_name }}
+        id: check
+        run: |
+          BETA=$(curl -fsSL \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ matrix.upstream_repo }}/releases?per_page=1" \
+            | jq -r '.[0].tag_name')
+
+          TAG="${{ matrix.tag_prefix }}${BETA}"
+
+          echo "Target: ${{ matrix.target_name }}"
+          echo "beta=${BETA}"
+
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://hub.docker.com/v2/repositories/${{ matrix.docker_repo }}/tags/${TAG}")
+
+          if [ "$HTTP" = "200" ]; then
+            echo "镜像 ${TAG} 已存在，跳过"
+            echo "has_update=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "检测到新版本 ${TAG}，触发构建"
+            echo "has_update=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger Build Workflow
+        if: steps.check.outputs.has_update == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run "${{ matrix.workflow_file }}"
