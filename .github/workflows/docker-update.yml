@@ -3,13 +3,6 @@ name: docker-update
 on:
   schedule:
     - cron: '0 */6 * * *'
-  workflow_dispatch:
-    inputs:
-      force:
-        description: '强制重新构建（忽略已有 tag 的检查）'
-        required: false
-        default: 'false'
-        type: boolean
 
 jobs:
   check-updates:
