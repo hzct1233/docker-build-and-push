@@ -16,18 +16,15 @@ ARG TARGETARCH
 COPY --from=build /root/nexttrace_linux_${TARGETARCH} /usr/local/bin/nexttrace
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 ENTRYPOINT ["nexttrace"]
-# docker buildx build --no-cache --target nexttrace --load --platform linux/amd64,linux/arm64 C:\Users\Administrator\OneDrive\123\备份\容器\镜像\nexttrace
 
 FROM scratch AS tiny
 ARG TARGETARCH
 COPY --from=build /root/nexttrace-tiny_linux_${TARGETARCH} /usr/local/bin/nexttrace-tiny
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 ENTRYPOINT ["nexttrace-tiny"]
-# docker buildx build --target tiny --load --platform linux/amd64,linux/arm64 C:\Users\Administrator\OneDrive\123\备份\容器\镜像\nexttrace
 
 FROM scratch AS ntr
 ARG TARGETARCH
 COPY --from=build /root/ntr_linux_${TARGETARCH} /usr/local/bin/ntr
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 ENTRYPOINT ["ntr"]
-# docker buildx build --target ntr --load --platform linux/amd64,linux/arm64 C:\Users\Administrator\OneDrive\123\备份\容器\镜像\nexttrace
