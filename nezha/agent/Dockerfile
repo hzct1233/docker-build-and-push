@@ -8,7 +8,7 @@ RUN TAG=$(curl -s https://api.github.com/repos/nezhahq/agent/releases | jq -r '.
     curl -L -O https://github.com/nezhahq/agent/releases/download/${VERSION}/nezha-agent_linux_${TARGETARCH}.zip && \
     unzip -p nezha-agent_linux_${TARGETARCH}.zip nezha-agent > /root/nezha-agent-${TARGETARCH} && \
     chmod +x nezha-agent-${TARGETARCH} && \
-    setcap cap_net_raw+ep nezha-agent-${TARGETARCH};
+    setcap cap_net_raw+ep nezha-agent-${TARGETARCH}
 
 FROM gcr.io/distroless/static-debian13:nonroot AS nezha-agent
 #FROM alpine:edge AS nezha-agent
