@@ -10,6 +10,9 @@ services:
       - ALL
     cap_add:
       - NET_RAW
+    environment:
+      - TZ=Asia/Shanghai
+      - HOST_PROC=/host/proc
     volumes:
       - ./komari-agent:/home/nonroot/komari-agent
       # 主系统设置：chown -R 65532:65532 /完整映射目录/komari-agent  数字需要和user一致，不设置会导致软件没有权限写入持久化文件
