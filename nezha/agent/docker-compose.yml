@@ -18,6 +18,7 @@ services:
       - /proc:/host/proc:ro
       - /etc/os-release:/etc/os-release:ro
       - /dev/null:/etc/debian_version:ro
+      # 哪吒作者是上古程序员，默认不读os-release，只能把debian_version映射走，不然不显示宿主系统的版本。
     command: -c /etc/nezha-agent/config.yml
     # https://nezha.wiki/guide/agent.html 打开往下滑到“在 OpenWrt 系统中安装 Agent”，从“3. 创建配置文件”开始按照文档创建配置文件。
     # 配置文件参数说明：https://nezha.wiki/configuration/agent.html
