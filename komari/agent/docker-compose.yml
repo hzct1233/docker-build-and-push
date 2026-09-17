@@ -5,7 +5,7 @@ services:
     network_mode: host
     restart: always # 开机启动
     pull_policy: always # 可选：始终拉取最新镜像
-    user: 65532:65532 # 可选：避免和其他容器或软件同用户
+    user: 65532:65532 # 可以把数字换成其他的避免和其他容器或软件同用户
     cap_drop:
       - ALL
     cap_add:
