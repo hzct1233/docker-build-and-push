@@ -5,9 +5,9 @@ WORKDIR /root
 RUN apk update && \
     apk add --no-cache curl jq
 RUN TAG=$(curl -s https://api.github.com/repos/nxtrace/NTrace-core/releases | jq -r '.[0].tag_name') && \
-    curl -L -O https://github.com/nxtrace/NTrace-core/releases/download/${VERSION}/nexttrace_linux_${TARGETARCH} && \
-    curl -L -O https://github.com/nxtrace/NTrace-core/releases/download/${VERSION}/nexttrace-tiny_linux_${TARGETARCH} && \
-    curl -L -O https://github.com/nxtrace/NTrace-core/releases/download/${VERSION}/ntr_linux_${TARGETARCH} && \
+    curl -fL -O https://github.com/nxtrace/NTrace-core/releases/download/${VERSION}/nexttrace_linux_${TARGETARCH} && \
+    curl -fL -O https://github.com/nxtrace/NTrace-core/releases/download/${VERSION}/nexttrace-tiny_linux_${TARGETARCH} && \
+    curl -fL -O https://github.com/nxtrace/NTrace-core/releases/download/${VERSION}/ntr_linux_${TARGETARCH} && \
     chmod +x *_linux_*
 #ENTRYPOINT ["sh", "-c", "tail -f /dev/null"]
 
