@@ -5,7 +5,7 @@ WORKDIR /root
 RUN apt update && \
     apt install -y curl jq unzip libcap2-bin
 RUN TAG=$(curl -s https://api.github.com/repos/nezhahq/agent/releases | jq -r '.[0].tag_name') && \
-    curl -L -O https://github.com/nezhahq/agent/releases/download/${VERSION}/nezha-agent_linux_${TARGETARCH}.zip && \
+    curl -fL -O https://github.com/nezhahq/agent/releases/download/${VERSION}/nezha-agent_linux_${TARGETARCH}.zip && \
     unzip -p nezha-agent_linux_${TARGETARCH}.zip nezha-agent > /root/nezha-agent-${TARGETARCH} && \
     chmod +x nezha-agent-${TARGETARCH} && \
     setcap cap_net_raw+ep nezha-agent-${TARGETARCH}
