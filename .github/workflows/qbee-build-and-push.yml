@@ -1,0 +1,100 @@
+name: qbee-build-and-push
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '强制重新构建（忽略已有 tag 的检查）'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      latest_version: ${{ steps.version.outputs.latest_version }}
+      build_latest: ${{ steps.check.outputs.build_latest }}
+    steps:
+      - name: Resolve upstream versions
+        id: version
+        run: |
+          LATEST=$(curl -fsSL \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/c0re100/qBittorrent-Enhanced-Edition/releases/latest \
+            | jq -r '.tag_name')
+          for v in "$LATEST"; do
+            if [ -z "$v" ] || [ "$v" = "null" ]; then
+              echo "::error::获取上游版本失败 latest=$LATEST beta=$BETA"; exit 1
+            fi
+          done
+          echo "latest_version=${LATEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Check which tags need building
+        id: check
+        env:
+          LATEST: ${{ steps.version.outputs.latest_version }}
+          FORCE: ${{ github.event.inputs.force }}
+        run: |
+          if [ "$FORCE" = "true" ]; then
+            echo "强制重建，跳过版本检查"
+            echo "build_latest=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 稳定版
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://hub.docker.com/v2/repositories/hzct123/qbittorrent-enhanced-edition/tags/${LATEST#release-}")
+          if [ "$HTTP" = "200" ]; then
+            echo "稳定版 ${LATEST} 已存在，跳过"
+            echo "build_latest=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "检测到新稳定版 ${LATEST}，触发构建"
+            echo "build_latest=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-latest:
+    needs: check
+    if: needs.check.outputs.build_latest == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: hzct123
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Resolve image tag
+        id: tag
+        env:
+          VERSION: ${{ needs.check.outputs.latest_version }}
+        run: echo "image_tag=${VERSION#release-}" >> "$GITHUB_OUTPUT"
+      - name: Build and push (latest)
+        uses: docker/build-push-action@v7
+        with:
+          context: ./qbittorrent-enhanced-edition
+          file: ./qbittorrent-enhanced-edition/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            VERSION=${{ needs.check.outputs.latest_version }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/qbittorrent-enhanced-edition:${{ steps.tag.outputs.image_tag }}
+            ghcr.io/${{ github.repository_owner }}/qbittorrent-enhanced-edition
+            hzct123/qbittorrent-enhanced-edition:${{ steps.tag.outputs.image_tag }}
+            hzct123/qbittorrent-enhanced-edition
